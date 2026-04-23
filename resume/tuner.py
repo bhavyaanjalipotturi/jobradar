@@ -7,6 +7,7 @@ load_dotenv()
 
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
+
 def tune_resume(resume_text: str, job_description: str, job_title: str = "") -> dict:
     """
     Uses Claude AI to rewrite the resume to match the job description.
@@ -86,7 +87,7 @@ INSTRUCTIONS:
    - Estimated ATS match score (target: 95%+)
    - List of keywords successfully added
    - List of gaps that were realistically bridged and how
-   - List of all [METRICS] bullets added with explanation of how numbers were estimated
+   - List of all metrics bullets added with explanation of how numbers were estimated
    - List of any FLAGGED skills the candidate needs to personally verify
    - 2-3 tips to further strengthen the application
 
@@ -110,7 +111,7 @@ Separate the resume from the report with this exact line:
 
 IMPORTANT:
 - Write the FULL resume — do not skip any section
-- Make sure 3-5 [METRICS] bullets are clearly visible in the resume
+- Make sure 3-5 metrics bullets with real numbers are clearly visible
 - The resume must be ready to copy and paste directly into a Word document
 """
 
@@ -134,6 +135,10 @@ IMPORTANT:
         else:
             tuned_resume = full_response
             final_report = ""
+
+        # Remove [METRICS] tags from resume — keep content, remove label
+        tuned_resume = tuned_resume.replace("[METRICS] ", "")
+        tuned_resume = tuned_resume.replace("[METRICS]", "")
 
         # Score AFTER tuning
         score_after = calculate_ats_score(tuned_resume, job_description)
@@ -159,11 +164,9 @@ def save_tuned_resume(tuned_text: str, output_path: str = "tuned_resume.pdf") ->
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
 
-    # Process each line
     for line in tuned_text.split("\n"):
         line = line.strip()
 
-        # Skip empty lines but add spacing
         if not line:
             pdf.ln(3)
             continue
@@ -177,7 +180,7 @@ def save_tuned_resume(tuned_text: str, output_path: str = "tuned_resume.pdf") ->
             pdf.ln(3)
             continue
 
-        # Detect section headers (ALL CAPS or ends with :)
+        # Detect section headers
         is_header = (
             line.isupper() or
             (line.endswith(":") and len(line) < 50) or
@@ -191,24 +194,20 @@ def save_tuned_resume(tuned_text: str, output_path: str = "tuned_resume.pdf") ->
             line.startswith("SUMMARY")
         )
 
-        # Detect name (first line)
         is_name = pdf.page_no() == 1 and pdf.get_y() < 30
 
         try:
             if is_name and len(line) < 50 and not line.startswith("-"):
-                # Name — large bold
                 pdf.set_font("Helvetica", "B", 16)
                 pdf.set_text_color(0, 0, 0)
                 pdf.cell(0, 8, line, ln=True, align="C")
                 pdf.ln(2)
 
             elif is_header:
-                # Section header
                 pdf.ln(3)
                 pdf.set_font("Helvetica", "B", 11)
                 pdf.set_text_color(0, 0, 128)
                 pdf.cell(0, 7, line.upper(), ln=True)
-                # Underline
                 pdf.set_draw_color(0, 0, 128)
                 pdf.set_line_width(0.3)
                 pdf.line(10, pdf.get_y(), 200, pdf.get_y())
@@ -216,7 +215,6 @@ def save_tuned_resume(tuned_text: str, output_path: str = "tuned_resume.pdf") ->
                 pdf.set_text_color(0, 0, 0)
 
             elif line.startswith("-") or line.startswith("•"):
-                # Bullet point
                 pdf.set_font("Helvetica", "", 9)
                 pdf.set_text_color(0, 0, 0)
                 bullet_text = line.lstrip("-•").strip()
@@ -226,25 +224,21 @@ def save_tuned_resume(tuned_text: str, output_path: str = "tuned_resume.pdf") ->
                 pdf.multi_cell(175, 5, bullet_text)
 
             elif "|" in line and len(line) < 100:
-                # Contact info line
                 pdf.set_font("Helvetica", "", 9)
                 pdf.set_text_color(80, 80, 80)
                 pdf.cell(0, 5, line, ln=True, align="C")
 
             elif line.startswith("Tech Stack"):
-                # Tech stack line
                 pdf.set_font("Helvetica", "I", 9)
                 pdf.set_text_color(80, 80, 80)
                 pdf.multi_cell(0, 5, line)
 
             else:
-                # Regular text
                 pdf.set_font("Helvetica", "", 10)
                 pdf.set_text_color(0, 0, 0)
                 pdf.multi_cell(0, 5, line)
 
         except Exception:
-            # If any encoding issue skip the line
             continue
 
     pdf.output(output_path)
@@ -256,13 +250,28 @@ if __name__ == "__main__":
     print("       AI RESUME TUNER — JobRadar")
     print("=" * 60)
 
-    # Step 1 — Resume path
-    resume_path = input("\nEnter path to your resume PDF: ").strip()
+    # Step 1 — File upload
+    print("\nTo upload your resume:")
+    print("Option 1: Drag and drop your PDF into this terminal window")
+    print("Option 2: Type the full path to your PDF file")
+    print()
+    resume_path = input("Upload your resume (drag PDF here or type path): ").strip()
+
+    # Remove quotes added by Mac when dragging files
+    resume_path = resume_path.strip("'").strip('"')
+
+    # Check file exists
+    if not os.path.exists(resume_path):
+        print(f"\nFile not found: {resume_path}")
+        print("Please check the path and try again.")
+        exit(1)
+
+    print(f"\nResume uploaded: {os.path.basename(resume_path)}")
 
     # Step 2 — Job description
     print("\nPaste the job description below.")
     print("Press Enter twice when done:\n")
-    lines = []
+    lines       = []
     empty_count = 0
     while True:
         line = input()
@@ -284,7 +293,7 @@ if __name__ == "__main__":
     try:
         resume_data = parse_resume_pdf(resume_path)
         resume_text = resume_data["full_text"]
-        print(f"Resume parsed — {len(resume_text)} characters read")
+        print(f"Resume uploaded successfully — {len(resume_text)} characters read")
         print(f"Name detected : {resume_data['name']}")
     except Exception as e:
         print(f"Error reading resume: {e}")
@@ -312,10 +321,10 @@ if __name__ == "__main__":
     print(result["tuned_resume"])
     print("\n" + "=" * 60)
 
-    # Step 9 — Save to file
+    # Step 9 — Save as PDF
     output_path = save_tuned_resume(result["tuned_resume"])
     print(f"\nResume saved as PDF: {output_path}")
-    print(f"Open it: open {output_path}")
+    print(f"Open it with: open {output_path}")
 
     # Step 10 — Show final report
     print("\n" + "=" * 60)
@@ -324,5 +333,5 @@ if __name__ == "__main__":
     print(result["final_report"])
 
     print("\n" + "=" * 60)
-    print("Done! Your resume is ready.")
+    print("Done! Your tuned resume is ready.")
     print("=" * 60)
