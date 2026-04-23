@@ -1,3 +1,5 @@
+*.pdf
+*.db
 .env
 venv/
 __pycache__/
@@ -5,5 +7,4 @@ __pycache__/
 *.pyo
 .DS_Store
 .vscode/
-*.db
 uploaded_resumes/
