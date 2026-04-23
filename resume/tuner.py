@@ -17,7 +17,6 @@ def tune_resume(resume_text: str, job_description: str, job_title: str = "") -> 
     # Score BEFORE tuning
     score_before = calculate_ats_score(resume_text, job_description)
 
-    # Build the AI prompt
     prompt = f"""You are an expert resume writer and ATS optimization specialist.
 
 I need you to transform the resume below to land an interview for the job description provided.
@@ -59,18 +58,18 @@ INSTRUCTIONS:
      * Counts: 12+ pipelines, 5 models, 8 workflows, 50K+ records
      * Time: reduced by 3 hours, delivered in 2 weeks
      * People: served 25+ stakeholders, supported 10+ clients
-   - Use these EXACT example formats — fill in the blanks with realistic numbers:
+   - Use these EXACT example formats:
      * "Built and maintained [X]+ Python-based pipelines processing [X]K+ daily records"
      * "Automated [X]+ recurring workflows reducing manual effort by [X]%"
      * "Trained and deployed [X] ML models achieving [X]% accuracy and [X] F1-score"
      * "Developed data pipelines processing [X]K+ records with [X]% data quality rate"
      * "Reduced data processing time by [X]% through automated Python scripting"
-   - Estimate numbers conservatively if not explicitly stated:
+   - Estimate numbers conservatively based on context:
      * Accenture (large enterprise) = millions of records, dozens of pipelines
-     * Capstone project (academic) = thousands of records, 3-5 models
-     * Internship (small company) = hundreds of records, 2-3 pipelines
-   - DO NOT write vague bullets like "improved efficiency" — ALWAYS add a number
-   - After writing the resume, count your metrics bullets — if less than 3, add more
+     * Capstone project (academic)  = thousands of records, 3-5 models
+     * Internship (small company)   = hundreds of records, 2-3 pipelines
+   - DO NOT write vague bullets — ALWAYS add a number
+   - After writing, count metrics bullets — if less than 3, add more
 
 5. Professional Summary
    - Write a 3-4 line summary tailored specifically to this job
@@ -87,7 +86,7 @@ INSTRUCTIONS:
    - Estimated ATS match score (target: 95%+)
    - List of keywords successfully added
    - List of gaps that were realistically bridged and how
-   - List of all metrics bullets added with explanation of how numbers were estimated
+   - List of all metrics bullets added with explanation
    - List of any FLAGGED skills the candidate needs to personally verify
    - 2-3 tips to further strengthen the application
 
@@ -127,7 +126,6 @@ IMPORTANT:
 
         full_response = message.content[0].text
 
-        # Split resume from report
         if "===REPORT===" in full_response:
             parts        = full_response.split("===REPORT===")
             tuned_resume = parts[0].strip()
@@ -136,11 +134,9 @@ IMPORTANT:
             tuned_resume = full_response
             final_report = ""
 
-        # Remove [METRICS] tags from resume — keep content, remove label
         tuned_resume = tuned_resume.replace("[METRICS] ", "")
         tuned_resume = tuned_resume.replace("[METRICS]", "")
 
-        # Score AFTER tuning
         score_after = calculate_ats_score(tuned_resume, job_description)
 
         return {
@@ -150,6 +146,135 @@ IMPORTANT:
             "score_after":   score_after,
             "before_report": format_score_report(score_before, "ATS Score BEFORE"),
             "after_report":  format_score_report(score_after,  "ATS Score AFTER"),
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def retune_resume(
+    tuned_resume_text: str,
+    job_description:   str,
+    job_title:         str,
+    previous_score:    dict
+) -> dict:
+    """
+    Re-tunes an already tuned resume using the ATS report findings.
+    Specifically targets missing keywords, skills and gaps to push score above 95.
+    """
+
+    # Get detailed score report
+    score_before = calculate_ats_score(tuned_resume_text, job_description)
+
+    # Extract what is missing
+    missing_keywords = score_before.get("missing_keywords", [])
+    missing_skills   = score_before.get("missing_skills", [])
+    keyword_score    = score_before.get("keyword_score", 0)
+    skills_score     = score_before.get("skills_score", 0)
+    edu_score        = score_before.get("edu_score", 0)
+    title_score      = score_before.get("title_score", 0)
+    format_score     = score_before.get("format_score", 0)
+    total_score      = score_before.get("total_score", 0)
+
+    prompt = f"""You are an expert ATS resume optimization specialist.
+
+The resume below has already been tuned once but only scored {total_score}/100.
+Your job is to push it above 95/100 by fixing EXACTLY what is missing.
+
+CURRENT SCORE BREAKDOWN:
+- Keyword Match   : {keyword_score}/30
+- Skills Match    : {skills_score}/25
+- Experience      : {score_before.get('exp_score', 0)}/20
+- Education       : {edu_score}/10
+- Job Title Match : {title_score}/10
+- Format          : {format_score}/5
+
+MISSING KEYWORDS THAT MUST BE ADDED:
+{', '.join(missing_keywords) if missing_keywords else 'None'}
+
+MISSING SKILLS THAT MUST BE ADDED:
+{', '.join(missing_skills) if missing_skills else 'None'}
+
+SPECIFIC INSTRUCTIONS TO HIT 95+:
+
+1. KEYWORD INJECTION — MANDATORY
+   - Every single missing keyword listed above MUST appear naturally in the resume
+   - Add them to: Professional Summary, Skills section, and bullet points
+   - Use the EXACT words — not synonyms
+   - Do not stuff them — weave them naturally into sentences
+
+2. SKILLS GAP — MANDATORY
+   - Every missing skill listed above MUST appear in the Skills section
+   - If no experience with it, add it as "familiar with X"
+   - Never leave a required skill completely absent
+
+3. JOB TITLE MATCH — MANDATORY
+   - The exact job title "{job_title}" MUST appear in:
+     * Professional Summary (first line)
+     * Skills or current role description
+   - This alone adds 10 points to the score
+
+4. METRICS — KEEP ALL EXISTING ONES
+   - Keep all quantified bullets already in the resume
+   - Add 1-2 more if possible with realistic numbers
+
+5. FORMAT IMPROVEMENTS
+   - Make sure all section headers are clearly defined
+   - Summary, Skills, Experience, Education must all be present
+   - Each section must have substantial content
+
+6. DO NOT REMOVE anything good already in the resume
+   - Only ADD and IMPROVE — never delete strong content
+   - Keep all existing metrics and achievements
+
+CURRENT RESUME TO IMPROVE:
+{tuned_resume_text}
+
+JOB DESCRIPTION:
+{job_description}
+
+Write the COMPLETE improved resume then add:
+===REPORT===
+Then write:
+- Exact ATS score you estimate this will achieve
+- List every missing keyword you added and where
+- List every missing skill you added
+- Confirmation that job title appears in summary
+- 2 final tips
+"""
+
+    print("\nRe-tuning resume targeting missing requirements...")
+    print("This takes 30-60 seconds...\n")
+
+    try:
+        message = client.messages.create(
+            model      = "claude-haiku-4-5-20251001",
+            max_tokens = 4000,
+            messages   = [{"role": "user", "content": prompt}]
+        )
+
+        full_response = message.content[0].text
+
+        if "===REPORT===" in full_response:
+            parts        = full_response.split("===REPORT===")
+            tuned_resume = parts[0].strip()
+            final_report = parts[1].strip() if len(parts) > 1 else ""
+        else:
+            tuned_resume = full_response
+            final_report = ""
+
+        tuned_resume = tuned_resume.replace("[METRICS] ", "")
+        tuned_resume = tuned_resume.replace("[METRICS]", "")
+
+        score_after = calculate_ats_score(tuned_resume, job_description)
+
+        return {
+            "tuned_resume":  tuned_resume,
+            "final_report":  final_report,
+            "score_before":  score_before,
+            "score_after":   score_after,
+            "before_report": format_score_report(score_before, "Score Before Re-tune"),
+            "after_report":  format_score_report(score_after,  "Score After Re-tune"),
         }
 
     except Exception as e:
@@ -171,7 +296,6 @@ def save_tuned_resume(tuned_text: str, output_path: str = "tuned_resume.pdf") ->
             pdf.ln(3)
             continue
 
-        # Remove markdown symbols
         line = line.replace("**", "").replace("##", "").replace("#", "")
         line = line.replace("---", "").replace("*", "")
         line = line.strip()
@@ -180,7 +304,6 @@ def save_tuned_resume(tuned_text: str, output_path: str = "tuned_resume.pdf") ->
             pdf.ln(3)
             continue
 
-        # Detect section headers
         is_header = (
             line.isupper() or
             (line.endswith(":") and len(line) < 50) or
@@ -250,25 +373,19 @@ if __name__ == "__main__":
     print("       AI RESUME TUNER — JobRadar")
     print("=" * 60)
 
-    # Step 1 — File upload
     print("\nTo upload your resume:")
     print("Option 1: Drag and drop your PDF into this terminal window")
     print("Option 2: Type the full path to your PDF file")
     print()
     resume_path = input("Upload your resume (drag PDF here or type path): ").strip()
-
-    # Remove quotes added by Mac when dragging files
     resume_path = resume_path.strip("'").strip('"')
 
-    # Check file exists
     if not os.path.exists(resume_path):
         print(f"\nFile not found: {resume_path}")
-        print("Please check the path and try again.")
         exit(1)
 
     print(f"\nResume uploaded: {os.path.basename(resume_path)}")
 
-    # Step 2 — Job description
     print("\nPaste the job description below.")
     print("Press Enter twice when done:\n")
     lines       = []
@@ -284,10 +401,8 @@ if __name__ == "__main__":
         lines.append(line)
     job_description = "\n".join(lines).strip()
 
-    # Step 3 — Job title
     job_title = input("\nEnter the job title: ").strip()
 
-    # Step 4 — Parse resume
     from resume.parser import parse_resume_pdf
     print("\nReading your resume...")
     try:
@@ -299,39 +414,31 @@ if __name__ == "__main__":
         print(f"Error reading resume: {e}")
         exit(1)
 
-    # Step 5 — Show score BEFORE
     print("\n" + "=" * 60)
     score_before = calculate_ats_score(resume_text, job_description)
     print(format_score_report(score_before, "ATS Score BEFORE Tuning"))
 
-    # Step 6 — Tune the resume
     result = tune_resume(resume_text, job_description, job_title)
 
     if "error" in result:
         print(f"\nError: {result['error']}")
         exit(1)
 
-    # Step 7 — Show score AFTER
     print(result["after_report"])
 
-    # Step 8 — Show full updated resume
     print("\n" + "=" * 60)
-    print("   UPDATED RESUME — COPY THIS INTO YOUR WORD DOCUMENT")
+    print("   UPDATED RESUME")
     print("=" * 60 + "\n")
     print(result["tuned_resume"])
-    print("\n" + "=" * 60)
 
-    # Step 9 — Save as PDF
     output_path = save_tuned_resume(result["tuned_resume"])
     print(f"\nResume saved as PDF: {output_path}")
     print(f"Open it with: open {output_path}")
 
-    # Step 10 — Show final report
     print("\n" + "=" * 60)
     print("   FINAL REPORT")
     print("=" * 60 + "\n")
     print(result["final_report"])
-
     print("\n" + "=" * 60)
     print("Done! Your tuned resume is ready.")
     print("=" * 60)
