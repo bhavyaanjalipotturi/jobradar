@@ -151,10 +151,103 @@ IMPORTANT:
         return {"error": str(e)}
 
 
-def save_tuned_resume(tuned_text: str, output_path: str = "tuned_resume.txt") -> str:
-    """Save tuned resume as text file."""
-    with open(output_path, "w") as f:
-        f.write(tuned_text)
+def save_tuned_resume(tuned_text: str, output_path: str = "tuned_resume.pdf") -> str:
+    """Save tuned resume as PDF file."""
+    from fpdf import FPDF
+
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+
+    # Process each line
+    for line in tuned_text.split("\n"):
+        line = line.strip()
+
+        # Skip empty lines but add spacing
+        if not line:
+            pdf.ln(3)
+            continue
+
+        # Remove markdown symbols
+        line = line.replace("**", "").replace("##", "").replace("#", "")
+        line = line.replace("---", "").replace("*", "")
+        line = line.strip()
+
+        if not line:
+            pdf.ln(3)
+            continue
+
+        # Detect section headers (ALL CAPS or ends with :)
+        is_header = (
+            line.isupper() or
+            (line.endswith(":") and len(line) < 50) or
+            line.startswith("PROFESSIONAL") or
+            line.startswith("TECHNICAL") or
+            line.startswith("EXPERIENCE") or
+            line.startswith("EDUCATION") or
+            line.startswith("PROJECTS") or
+            line.startswith("SKILLS") or
+            line.startswith("CERTIFICATIONS") or
+            line.startswith("SUMMARY")
+        )
+
+        # Detect name (first line)
+        is_name = pdf.page_no() == 1 and pdf.get_y() < 30
+
+        try:
+            if is_name and len(line) < 50 and not line.startswith("-"):
+                # Name — large bold
+                pdf.set_font("Helvetica", "B", 16)
+                pdf.set_text_color(0, 0, 0)
+                pdf.cell(0, 8, line, ln=True, align="C")
+                pdf.ln(2)
+
+            elif is_header:
+                # Section header
+                pdf.ln(3)
+                pdf.set_font("Helvetica", "B", 11)
+                pdf.set_text_color(0, 0, 128)
+                pdf.cell(0, 7, line.upper(), ln=True)
+                # Underline
+                pdf.set_draw_color(0, 0, 128)
+                pdf.set_line_width(0.3)
+                pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+                pdf.ln(2)
+                pdf.set_text_color(0, 0, 0)
+
+            elif line.startswith("-") or line.startswith("•"):
+                # Bullet point
+                pdf.set_font("Helvetica", "", 9)
+                pdf.set_text_color(0, 0, 0)
+                bullet_text = line.lstrip("-•").strip()
+                pdf.set_x(15)
+                pdf.cell(5, 5, "•", ln=False)
+                pdf.set_x(20)
+                pdf.multi_cell(175, 5, bullet_text)
+
+            elif "|" in line and len(line) < 100:
+                # Contact info line
+                pdf.set_font("Helvetica", "", 9)
+                pdf.set_text_color(80, 80, 80)
+                pdf.cell(0, 5, line, ln=True, align="C")
+
+            elif line.startswith("Tech Stack"):
+                # Tech stack line
+                pdf.set_font("Helvetica", "I", 9)
+                pdf.set_text_color(80, 80, 80)
+                pdf.multi_cell(0, 5, line)
+
+            else:
+                # Regular text
+                pdf.set_font("Helvetica", "", 10)
+                pdf.set_text_color(0, 0, 0)
+                pdf.multi_cell(0, 5, line)
+
+        except Exception:
+            # If any encoding issue skip the line
+            continue
+
+    pdf.output(output_path)
     return output_path
 
 
@@ -221,8 +314,8 @@ if __name__ == "__main__":
 
     # Step 9 — Save to file
     output_path = save_tuned_resume(result["tuned_resume"])
-    print(f"\nResume also saved to: {output_path}")
-    print("Open it in VS Code: code tuned_resume.txt")
+    print(f"\nResume saved as PDF: {output_path}")
+    print(f"Open it: open {output_path}")
 
     # Step 10 — Show final report
     print("\n" + "=" * 60)

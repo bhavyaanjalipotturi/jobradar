@@ -8,6 +8,9 @@ from fetchers.remotive import fetch_remotive_jobs
 from fetchers.arbeitnow import fetch_arbeitnow_jobs
 from fetchers.themuse import fetch_themuse_jobs
 from fetchers.greenhouse import fetch_greenhouse_jobs
+from fetchers.wellfound import fetch_wellfound_jobs
+from fetchers.otta import fetch_otta_jobs
+from fetchers.workable import fetch_workable_jobs
 
 # All available sources
 SOURCES = {
@@ -46,15 +49,36 @@ SOURCES = {
         "needs_location": False,
         "supports_date":  False
     },
+    "6": {
+        "name":           "WellFound (Startup + Equity Jobs)",
+        "key":            "wellfound",
+        "fetch":          fetch_wellfound_jobs,
+        "needs_location": False,
+        "supports_date":  False
+    },
+    "7": {
+        "name":           "Otta (Tech Growth Companies)",
+        "key":            "otta",
+        "fetch":          fetch_otta_jobs,
+        "needs_location": False,
+        "supports_date":  False
+    },
+    "8": {
+        "name":           "RemoteOK (Remote Jobs)",
+        "key":            "remoteok",
+        "fetch":          fetch_workable_jobs,
+        "needs_location": False,
+        "supports_date":  False
+    },
 }
 
 # Date filter options
 DATE_FILTERS = {
-    "1": {"label": "Last 24 hours",  "jsearch": "today",  "hours": 24},
-    "2": {"label": "Last 2 days",    "jsearch": "3days",  "hours": 48},
-    "3": {"label": "Last 3 days",    "jsearch": "3days",  "hours": 72},
-    "4": {"label": "Last 7 days",    "jsearch": "week",   "hours": 168},
-    "5": {"label": "Last 30 days",   "jsearch": "month",  "hours": 720},
+    "1": {"label": "Last 24 hours", "jsearch": "today",  "hours": 24},
+    "2": {"label": "Last 2 days",   "jsearch": "3days",  "hours": 48},
+    "3": {"label": "Last 3 days",   "jsearch": "3days",  "hours": 72},
+    "4": {"label": "Last 7 days",   "jsearch": "week",   "hours": 168},
+    "5": {"label": "Last 30 days",  "jsearch": "month",  "hours": 720},
 }
 
 
@@ -62,7 +86,7 @@ def filter_by_date(jobs: list, hours: int) -> list:
     """Filter jobs posted within the last N hours."""
     if hours == 720:
         return jobs
-    cutoff = datetime.utcnow() - timedelta(hours=hours)
+    cutoff   = datetime.utcnow() - timedelta(hours=hours)
     filtered = []
     for job in jobs:
         posted = job.get("posted_at", "")
@@ -96,7 +120,7 @@ def fetch_all_jobs(
     if selected_sources is None:
         selected_sources = list(SOURCES.keys())
 
-    date_config = DATE_FILTERS.get(date_filter_key, DATE_FILTERS["1"])
+    date_config  = DATE_FILTERS.get(date_filter_key, DATE_FILTERS["1"])
     jsearch_date = date_config["jsearch"]
     hours        = date_config["hours"]
 
@@ -126,8 +150,10 @@ def fetch_all_jobs(
                 jobs = filter_by_date(jobs, hours)
 
             all_jobs += jobs
+
         except Exception as e:
-            print(f"Error fetching from {source['name']}: {e}")
+            print(f"Error from {source['name']}: {e}")
+            continue
 
     # Deduplicate by URL
     seen_urls   = set()
@@ -172,10 +198,10 @@ if __name__ == "__main__":
 
     # Step 4 — Portal selection
     print("\nSelect job portals:")
-    print("─" * 50)
+    print("─" * 55)
     for key, source in SOURCES.items():
         print(f"  [{key}] {source['name']}")
-    print("─" * 50)
+    print("─" * 55)
     print("  [A] All portals")
     print()
     choice = input("Your choice (e.g. 1,2,3 or A for all): ").strip().upper()
