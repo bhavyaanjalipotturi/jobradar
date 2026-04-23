@@ -1,0 +1,86 @@
+# BHAVYA ANJALI POTTURI
+Glen Allen, VA | (571) 999-3324 | bhavyaanjalipotturi@gmail.com | LinkedIn | GitHub
+
+## PROFESSIONAL SUMMARY
+Junior AI/ML Engineer with 3+ years of hands-on experience building enterprise AI chatbot systems, machine learning models, and data pipelines connecting LLM agents to SQL databases. Proficient in Python, scikit-learn, pandas, and LLM APIs (Claude, OpenAI). Skilled in developing prediction and classification models, integrating ML outputs into production workflows, and collaborating with clients in fast-paced consulting environments. Ready to drive enterprise AI agent development and data intelligence systems.
+
+## TECHNICAL SKILLS
+
+**Programming & ML Libraries:** Python (expert), scikit-learn, pandas, NumPy, regression, classification, clustering, supervised/unsupervised machine learning, feature engineering, model evaluation
+
+**LLM & AI Agents:** LLM APIs (Claude/Anthropic, OpenAI), LangChain, prompt engineering, generative AI workflows, AI-assisted data summarization, agent-based AI architecture, chatbot development
+
+**Databases & SQL:** SQL (expert-level), PostgreSQL, Snowflake, Microsoft SQL Server, database connectivity, enterprise data integration
+
+**Backend Services & APIs:** FastAPI, Flask, REST APIs, API integration, backend service development
+
+**Data Pipelines & Automation:** ETL/ELT pipelines, Python scripting, dbt, workflow orchestration, data quality validation, pipeline automation
+
+**Cloud Platforms:** AWS, Azure, cloud-based ML deployment, data pipeline deployment
+
+**Additional Tools:** Git, Power BI, Tableau, Excel, JSON, XML, Microsoft Office Suite
+
+## PROFESSIONAL EXPERIENCE
+
+**Accenture — AI/ML Analyst & Data Engineer**
+Hyderabad, India | Jul 2020 – Jan 2023
+
+- Built and maintained 12+ Python-based data pipelines processing 500K+ daily records from enterprise SQL databases (Snowflake, Microsoft SQL Server) to analytical systems, directly mirroring architecture required for enterprise AI chatbot and agent integration with structured data sources.
+
+- Developed and executed 25+ complex SQL queries and data workflows extracting, transforming, and delivering enterprise datasets—establishing core data connectivity foundations essential for LLM-based agent systems connecting to internal databases and APIs.
+
+- Implemented data preprocessing, validation, and quality frameworks across large-scale datasets achieving 98% data quality rate, developing feature engineering and data preparation skills critical for reliable ML model inputs and production chatbot pipelines.
+
+- Automated 15+ recurring data processing and reporting workflows using Python scripting and dbt orchestration, reducing manual effort by 40% and building backend infrastructure skills for enterprise AI decision-support systems.
+
+- Collaborated directly with 10+ clients and cross-functional stakeholders to gather requirements, translate business needs into technical specifications, and deliver ML-integrated analytics solutions—demonstrating client-facing communication ability essential for this role.
+
+- Documented model logic, transformation workflows, and implementation details comprehensively, supporting team collaboration, knowledge transfer, and client-facing deliverables aligned with enterprise standards.
+
+**Tech Stack:** SQL, Python, Snowflake, Azure, dbt, Power BI, Git, REST APIs, Pandas, NumPy
+
+---
+
+**Junior AI/ML Engineer — Enterprise Analytics & AI Project**
+Hospital Management System | Aug 2025 – Dec 2025 (Current)
+
+- Designed and deployed 5 machine learning models (classification, regression, clustering) using scikit-learn, performing end-to-end ML workflows including data preprocessing, feature engineering, model training, and evaluation achieving 87% average accuracy and 0.84 F1-score across primary models.
+
+- Built SQL and Python-based data pipelines connecting structured enterprise datasets (2K+ hospital operational records) to ML models and AI-powered Power BI dashboards, directly replicating architecture of enterprise AI agent systems integrating chat interfaces with SQL databases.
+
+- Integrated LLM API workflows (Claude/Anthropic) for prompt-based analytical automation and AI-assisted data summarization, gaining hands-on experience embedding LLM capabilities into enterprise data systems and chatbot workflows.
+
+- Developed interactive Power BI dashboards integrated with ML model outputs to surface AI-generated insights on operational KPIs, demonstrating ability to integrate ML predictions and classifications into production-facing workflow interfaces.
+
+- Applied clustering and unsupervised learning techniques to identify behavioral patterns across operational datasets, broadening hands-on experience across prediction, classification, and clustering use cases required for diverse enterprise AI agent scenarios.
+
+- Documented model logic, agent architecture concepts, and workflow implementations, maintaining clear technical documentation aligned with client-facing delivery standards.
+
+**Tech Stack:** Python, scikit-learn, pandas, NumPy, SQL, LLM APIs (Claude), Power BI, Git
+
+---
+
+**Infochord Technologies — Data Engineering Intern**
+Hyderabad, India | Aug 2018 – Nov 2018
+
+- Built 3 SQL-based data transformation pipelines and ETL workflows for transactional datasets (50K+ records), developing foundational database connectivity and backend data processing skills directly applicable to enterprise AI chatbot data integration and agent-database connection patterns.
+
+- Automated recurring data collection workflows using Python scripting, reducing manual data handling by 35% and building core automation skills relevant to AI/ML workflow support and production pipeline maintenance.
+
+- Validated and cleansed raw datasets using Python-based logic checks, ensuring clean, reliable data inputs—foundational data preprocessing skills critical for reliable ML model training and chatbot-integrated intelligence systems.
+
+**Tech Stack:** SQL, Python, Tableau, Excel
+
+## EDUCATION
+
+**George Mason University**
+Master of Science, Information Systems | Dec 2025
+GPA: 3.80/4
+Coursework: DBMS, Algorithms, Machine Learning, Artificial Intelligence
+
+**Koneru Lakshmaiah University**
+Bachelor's Degree, Computer Science and Engineering | June 2020
+CGPA: 8.74/10
+Coursework: Database Systems, Data Structures, Computer Networks, Machine Learning, Artificial Intelligence
+
+---
