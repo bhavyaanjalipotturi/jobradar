@@ -9,6 +9,14 @@ from resume.parser import parse_resume_pdf
 from resume.ats_scorer import calculate_ats_score, format_score_report, calculate_human_score
 from resume.tuner import tune_resume, retune_resume, rehumanize_resume, save_tuned_resume
 
+# Load secrets for Streamlit Cloud deployment
+try:
+    os.environ["RAPIDAPI_KEY"]      = st.secrets["RAPIDAPI_KEY"]
+    os.environ["ANTHROPIC_API_KEY"] = st.secrets["ANTHROPIC_API_KEY"]
+except Exception:
+    from dotenv import load_dotenv
+    load_dotenv()
+
 st.set_page_config(
     page_title = "JobRadar — AI Job Search & Resume Tuner",
     page_icon  = "🎯",
@@ -174,7 +182,6 @@ with tab1:
         date_filter_key = date_options[selected_date_label]
         limit           = st.slider("Number of Jobs", 5, 100, 20, 5)
 
-    # ── Portal checkboxes ─────────────────────────────────────────────────────
     st.subheader("Select Job Portals")
     cols     = st.columns(4)
     selected = []
@@ -185,7 +192,7 @@ with tab1:
 
     st.markdown("---")
 
-    if st.button("🔍 Search Jobs", type="primary", use_container_width=True):
+    if st.button("Search Jobs", type="primary", use_container_width=True):
         if not job_title:
             st.warning("Please enter a job title.")
         elif not selected:
@@ -202,7 +209,7 @@ with tab1:
             else:
                 clean_location = location
 
-            with st.spinner(f"Searching '{job_title}' in {location}..."):
+            with st.spinner("Searching jobs across portals..."):
                 all_jobs = fetch_all_jobs(
                     job_title        = job_title,
                     location         = clean_location,
@@ -270,7 +277,6 @@ with tab1:
                 st.session_state.search_job_type  = job_type
                 st.session_state.search_visa_type = visa_type
 
-    # ── Show results ──────────────────────────────────────────────────────────
     if "search_results" in st.session_state:
         jobs = st.session_state.search_results
 
@@ -278,12 +284,12 @@ with tab1:
             st.error("No jobs found. Try different filters or a broader title.")
         else:
             st.success(
-                f"Found **{len(jobs)}** jobs for "
-                f"**{st.session_state.get('search_job_title','')}** | "
-                f"📍 {st.session_state.get('search_location','')} | "
-                f"👤 {st.session_state.get('search_exp_level','')} | "
-                f"💼 {', '.join(st.session_state.get('search_job_type', []))} | "
-                f"🛂 {st.session_state.get('search_visa_type','')}"
+                "Found " + str(len(jobs)) + " jobs for " +
+                str(st.session_state.get('search_job_title','')) + " | " +
+                str(st.session_state.get('search_location','')) + " | " +
+                str(st.session_state.get('search_exp_level','')) + " | " +
+                ", ".join(st.session_state.get('search_job_type', [])) + " | " +
+                str(st.session_state.get('search_visa_type',''))
             )
 
             sources_found = {}
@@ -301,27 +307,24 @@ with tab1:
             for i, job in enumerate(jobs):
                 c1, c2 = st.columns([4, 1])
                 with c1:
-                    st.markdown(f"**{i+1}. {job.get('title', 'No Title')}**")
+                    st.markdown("**" + str(i+1) + ". " + job.get('title', 'No Title') + "**")
                     st.markdown(
-                        f"🏢 {job.get('company', 'Unknown')} &nbsp;&nbsp;"
-                        f"📍 {job.get('location', 'Unknown')} &nbsp;&nbsp;"
-                        f"💼 {job.get('job_type', 'Full-time')} &nbsp;&nbsp;"
-                        f"{'🌐 Remote' if job.get('remote') else '🏢 On-site'}"
+                        "🏢 " + job.get('company', 'Unknown') + " &nbsp;&nbsp;" +
+                        "📍 " + job.get('location', 'Unknown') + " &nbsp;&nbsp;" +
+                        "💼 " + job.get('job_type', 'Full-time') + " &nbsp;&nbsp;" +
+                        ("🌐 Remote" if job.get('remote') else "🏢 On-site")
                     )
                     salary = job.get("salary", "")
                     if salary and salary != "Not specified":
-                        st.markdown(f"💰 {salary}")
+                        st.markdown("💰 " + salary)
                     posted = job.get("posted_at", "")
                     if posted:
-                        st.markdown(
-                            f"📅 {posted[:10]} &nbsp;&nbsp;"
-                            f"🔗 {job.get('source', '')}"
-                        )
+                        st.markdown("📅 " + posted[:10] + " &nbsp;&nbsp; 🔗 " + job.get('source', ''))
                 with c2:
                     url = job.get("url", "")
                     if url:
                         st.link_button("Apply Now", url, use_container_width=True)
-                    if st.button("Tune Resume", key=f"tune_{i}", use_container_width=True):
+                    if st.button("Tune Resume", key="tune_" + str(i), use_container_width=True):
                         st.session_state.selected_job = job
                         st.info("Go to the Resume Tuner tab!")
                 st.markdown("---")
@@ -343,7 +346,7 @@ with tab2:
             type = ["pdf"]
         )
         if uploaded_file:
-            st.success(f"Resume uploaded: {uploaded_file.name}")
+            st.success("Resume uploaded: " + uploaded_file.name)
 
         job_title_tune = st.text_input(
             "Job Title",
@@ -353,7 +356,7 @@ with tab2:
 
         if "selected_job" in st.session_state:
             job = st.session_state.selected_job
-            st.info(f"Selected: {job.get('title')} at {job.get('company')}")
+            st.info("Selected: " + job.get('title', '') + " at " + job.get('company', ''))
 
     with col2:
         st.subheader("Paste Job Description")
@@ -369,8 +372,7 @@ with tab2:
 
     st.markdown("---")
 
-    # ── Tune button ───────────────────────────────────────────────────────────
-    if st.button("🚀 Tune My Resume", type="primary", use_container_width=True):
+    if st.button("Tune My Resume", type="primary", use_container_width=True):
         if not uploaded_file:
             st.error("Please upload your resume PDF first.")
         elif not job_description:
@@ -400,14 +402,11 @@ with tab2:
                     st.session_state.retune_resume        = result["tuned_resume"]
                     st.session_state.retune_score         = result["score_after"]["total_score"]
                     st.session_state.retune_round         = 1
-                    if "retune_result" in st.session_state:
-                        del st.session_state.retune_result
-                    if "human_result" in st.session_state:
-                        del st.session_state.human_result
-                    if "retune_human_result" in st.session_state:
-                        del st.session_state.retune_human_result
+                    for key in ["retune_result", "human_result", "retune_human_result"]:
+                        if key in st.session_state:
+                            del st.session_state[key]
                 else:
-                    st.error(f"Error: {result['error']}")
+                    st.error("Error: " + result['error'])
             finally:
                 os.unlink(tmp_path)
 
@@ -424,17 +423,17 @@ with tab2:
         st.markdown("### ATS Score — Before Tuning")
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.markdown(f'<div class="{color}">{score_val}/100</div>', unsafe_allow_html=True)
+            st.markdown('<div class="' + color + '">' + str(score_val) + '/100</div>', unsafe_allow_html=True)
             st.progress(score_val / 100)
         with col2:
-            st.metric("Keywords Matched", f"{score_before['matched_count']}/{score_before['total_jd_keywords']}")
-            st.metric("Skills Score",     f"{score_before['skills_score']}/25")
+            st.metric("Keywords Matched", str(score_before['matched_count']) + "/" + str(score_before['total_jd_keywords']))
+            st.metric("Skills Score",     str(score_before['skills_score']) + "/25")
         with col3:
-            st.metric("Experience Score", f"{score_before['exp_score']}/20")
-            st.metric("Education Score",  f"{score_before['edu_score']}/10")
+            st.metric("Experience Score", str(score_before['exp_score']) + "/20")
+            st.metric("Education Score",  str(score_before['edu_score']) + "/10")
 
         if score_before.get("missing_skills"):
-            st.warning(f"Missing skills: {', '.join(score_before['missing_skills'][:5])}")
+            st.warning("Missing skills: " + ", ".join(score_before['missing_skills'][:5]))
 
         st.markdown("---")
 
@@ -443,52 +442,46 @@ with tab2:
         st.markdown("### ATS Score — After Tuning")
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.markdown(f'<div class="{color2}">{score_val2}/100</div>', unsafe_allow_html=True)
+            st.markdown('<div class="' + color2 + '">' + str(score_val2) + '/100</div>', unsafe_allow_html=True)
             st.progress(score_val2 / 100)
         with col2:
             st.metric(
                 "Keywords Matched",
-                f"{score_after['matched_count']}/{score_after['total_jd_keywords']}",
+                str(score_after['matched_count']) + "/" + str(score_after['total_jd_keywords']),
                 delta = score_after['matched_count'] - score_before['matched_count']
             )
             st.metric(
                 "Skills Score",
-                f"{score_after['skills_score']}/25",
+                str(score_after['skills_score']) + "/25",
                 delta = score_after['skills_score'] - score_before['skills_score']
             )
         with col3:
-            st.metric("Total Improvement", f"+{score_val2 - score_val}", delta=score_val2 - score_val)
-            st.metric("Final Score", f"{score_val2}/100")
+            st.metric("Total Improvement", "+" + str(score_val2 - score_val), delta=score_val2 - score_val)
+            st.metric("Final Score", str(score_val2) + "/100")
 
         st.markdown("---")
 
-        # Show tuned resume
         st.markdown("### Your Updated Resume")
-        st.text_area(
-            "Copy this resume",
-            value  = result["tuned_resume"],
-            height = 400,
-            key    = "tuned_text"
-        )
+        st.text_area("Copy this resume", value=result["tuned_resume"], height=400, key="tuned_text")
 
         pdf_path = save_tuned_resume(result["tuned_resume"])
         with open(pdf_path, "rb") as f:
             pdf_bytes = f.read()
         st.download_button(
-            label               = "📥 Download Tuned Resume as PDF",
+            label               = "Download Tuned Resume as PDF",
             data                = pdf_bytes,
             file_name           = "tuned_resume.pdf",
             mime                = "application/pdf",
             use_container_width = True
         )
 
-        with st.expander("📊 View Full ATS Report"):
+        with st.expander("View Full ATS Report"):
             st.markdown(result["final_report"])
 
         st.markdown("---")
 
         # ── Human vs AI Writing Score ─────────────────────────────────────────
-        st.markdown("### ✍️ Human vs AI Writing Score")
+        st.markdown("### Human vs AI Writing Score")
         human_data = calculate_human_score(result["tuned_resume"])
 
         col1, col2, col3 = st.columns(3)
@@ -496,7 +489,7 @@ with tab2:
             h_color = "score-good" if human_data["human_score"] >= 90 else \
                       "score-fair" if human_data["human_score"] >= 75 else "score-poor"
             st.markdown(
-                f'<div class="{h_color}">🧑 Human: {human_data["human_score"]}%</div>',
+                '<div class="' + h_color + '">Human: ' + str(human_data["human_score"]) + '%</div>',
                 unsafe_allow_html=True
             )
             st.progress(human_data["human_score"] / 100)
@@ -504,47 +497,35 @@ with tab2:
             a_color = "score-poor" if human_data["ai_score"] >= 25 else \
                       "score-fair" if human_data["ai_score"] >= 10 else "score-good"
             st.markdown(
-                f'<div class="{a_color}">🤖 AI: {human_data["ai_score"]}%</div>',
+                '<div class="' + a_color + '">AI Generated: ' + str(human_data["ai_score"]) + '%</div>',
                 unsafe_allow_html=True
             )
             st.progress(human_data["ai_score"] / 100)
         with col3:
-            st.markdown(f"**{human_data['emoji']} {human_data['rating']}**")
+            st.markdown("**" + human_data['emoji'] + " " + human_data['rating'] + "**")
             if human_data["ai_phrases_found"]:
-                st.warning(
-                    f"AI phrases detected: "
-                    f"{', '.join(human_data['ai_phrases_found'][:5])}"
-                )
+                st.warning("AI phrases detected: " + ", ".join(human_data['ai_phrases_found'][:5]))
 
         if human_data["human_score"] < 95:
             st.warning(
-                f"Human writing score is {human_data['human_score']}%. "
-                f"Click below to rewrite in natural human language — "
-                f"all content and meaning stays exactly the same."
+                "Human writing score is " + str(human_data['human_score']) + "%. " +
+                "Click below to rewrite in natural human language. " +
+                "All content and meaning stays exactly the same."
             )
-            if st.button(
-                "✍️ Re-write in Human Tone",
-                type                = "primary",
-                use_container_width = True,
-                key                 = "rehumanize_btn"
-            ):
+            if st.button("Re-write in Human Tone", type="primary", use_container_width=True, key="rehumanize_btn"):
                 with st.spinner("Rewriting resume in natural human tone... (30-60 seconds)"):
                     human_result = rehumanize_resume(
                         resume_text     = result["tuned_resume"],
                         job_description = st.session_state.tune_jd,
                         job_title       = st.session_state.tune_title
                     )
-
                 if "error" not in human_result:
                     st.session_state.human_result  = human_result
                     st.session_state.retune_resume = human_result["human_resume"]
                 else:
-                    st.error(f"Error: {human_result['error']}")
+                    st.error("Error: " + human_result['error'])
         else:
-            st.success(
-                f"✅ Human score: {human_data['human_score']}% — "
-                f"Resume sounds naturally written!"
-            )
+            st.success("Human score: " + str(human_data['human_score']) + "% — Resume sounds naturally written!")
 
         # Show human rewrite result
         if "human_result" in st.session_state:
@@ -554,68 +535,48 @@ with tab2:
             ai_after = hr["score_after"]["ai_score"]
 
             st.markdown("---")
-            st.markdown("### ✅ Re-written in Human Tone")
+            st.markdown("### Re-written in Human Tone")
 
             col1, col2, col3 = st.columns(3)
             with col1:
                 color_h = "score-good" if h_after >= 90 else "score-fair"
                 st.markdown(
-                    f'<div class="{color_h}">🧑 Human: {h_after}%</div>',
+                    '<div class="' + color_h + '">Human: ' + str(h_after) + '%</div>',
                     unsafe_allow_html=True
                 )
                 st.progress(h_after / 100)
             with col2:
                 color_a = "score-good" if ai_after <= 10 else "score-fair"
                 st.markdown(
-                    f'<div class="{color_a}">🤖 AI: {ai_after}%</div>',
+                    '<div class="' + color_a + '">AI Generated: ' + str(ai_after) + '%</div>',
                     unsafe_allow_html=True
                 )
                 st.progress(ai_after / 100)
             with col3:
-                st.metric(
-                    "Human Score Improvement",
-                    f"{h_after}%",
-                    delta = h_after - h_before
-                )
+                st.metric("Human Score Improvement", str(h_after) + "%", delta=h_after - h_before)
 
             st.markdown("#### Your Human-Written Resume")
-            st.text_area(
-                "Copy this resume",
-                value  = hr["human_resume"],
-                height = 400,
-                key    = "human_text"
-            )
+            st.text_area("Copy this resume", value=hr["human_resume"], height=400, key="human_text")
 
-            human_pdf = save_tuned_resume(
-                hr["human_resume"],
-                output_path = "human_resume.pdf"
-            )
+            human_pdf = save_tuned_resume(hr["human_resume"], output_path="human_resume.pdf")
             with open(human_pdf, "rb") as f:
                 human_bytes = f.read()
             st.download_button(
-                label               = "📥 Download Human-Written Resume as PDF",
+                label               = "Download Human-Written Resume as PDF",
                 data                = human_bytes,
                 file_name           = "human_resume.pdf",
                 mime                = "application/pdf",
                 use_container_width = True
             )
 
-            with st.expander("📊 View Human Writing Report"):
+            with st.expander("View Human Writing Report"):
                 st.markdown(hr["human_report"])
 
             if h_after >= 95:
-                st.success(
-                    f"🎉 Human score: {h_after}% — "
-                    f"Resume sounds completely natural and ready to submit!"
-                )
+                st.success("Human score: " + str(h_after) + "% — Resume sounds completely natural and ready to submit!")
             else:
-                st.warning(f"Human score is {h_after}%. Click Re-write again to push higher!")
-                if st.button(
-                    "✍️ Re-write Again for Higher Human Score",
-                    type                = "primary",
-                    use_container_width = True,
-                    key                 = "rehumanize_again_btn"
-                ):
+                st.warning("Human score is " + str(h_after) + "%. Click Re-write again to push higher!")
+                if st.button("Re-write Again for Higher Human Score", type="primary", use_container_width=True, key="rehumanize_again_btn"):
                     with st.spinner("Rewriting again in human tone..."):
                         next_human = rehumanize_resume(
                             resume_text     = hr["human_resume"],
@@ -634,22 +595,12 @@ with tab2:
 
         if current_score >= 95:
             st.balloons()
-            st.success(
-                f"🎉 Perfect! Your resume scores {current_score}/100 — "
-                f"ATS Optimized and ready to submit!"
-            )
+            st.success("Perfect! Your resume scores " + str(current_score) + "/100 — ATS Optimized and ready to submit!")
             st.info("Download your resume above and submit with confidence!")
         else:
-            st.warning(
-                f"Your ATS score is {current_score}/100. "
-                f"Click Re-tune to target missing requirements and push above 95%+"
-            )
+            st.warning("Your ATS score is " + str(current_score) + "/100. Click Re-tune to target missing requirements and push above 95%+")
 
-            if st.button(
-                "🔄 Re-tune Resume for Higher ATS Score",
-                type                = "primary",
-                use_container_width = True
-            ):
+            if st.button("Re-tune Resume for Higher ATS Score", type="primary", use_container_width=True):
                 with st.spinner("Analyzing ATS report and targeting missing requirements..."):
                     retune_result = retune_resume(
                         tuned_resume_text = st.session_state.retune_resume,
@@ -673,42 +624,31 @@ with tab2:
         old_score     = retune_result["score_before"]["total_score"]
         round_num     = st.session_state.get("retune_round", 1)
 
-        st.markdown(f"### Re-tune Round {round_num} — ATS Score")
+        st.markdown("### Re-tune Round " + str(round_num) + " — ATS Score")
         col1, col2 = st.columns(2)
         with col1:
             color3 = "score-good" if new_score >= 75 else "score-fair"
-            st.markdown(
-                f'<div class="{color3}">{new_score}/100</div>',
-                unsafe_allow_html=True
-            )
+            st.markdown('<div class="' + color3 + '">' + str(new_score) + '/100</div>', unsafe_allow_html=True)
             st.progress(new_score / 100)
         with col2:
-            st.metric("Score Improvement", f"{new_score}/100", delta=new_score - old_score)
+            st.metric("Score Improvement", str(new_score) + "/100", delta=new_score - old_score)
 
         st.markdown("### Re-tuned Resume")
-        st.text_area(
-            "Copy this improved resume",
-            value  = retune_result["tuned_resume"],
-            height = 400,
-            key    = f"retune_text_{round_num}"
-        )
+        st.text_area("Copy this improved resume", value=retune_result["tuned_resume"], height=400, key="retune_text_" + str(round_num))
 
-        retune_pdf = save_tuned_resume(
-            retune_result["tuned_resume"],
-            output_path = "retuned_resume.pdf"
-        )
+        retune_pdf = save_tuned_resume(retune_result["tuned_resume"], output_path="retuned_resume.pdf")
         with open(retune_pdf, "rb") as f:
             retune_bytes = f.read()
         st.download_button(
-            label               = "📥 Download Re-tuned Resume as PDF",
+            label               = "Download Re-tuned Resume as PDF",
             data                = retune_bytes,
             file_name           = "retuned_resume.pdf",
             mime                = "application/pdf",
             use_container_width = True,
-            key                 = f"download_retune_{round_num}"
+            key                 = "download_retune_" + str(round_num)
         )
 
-        with st.expander("📊 View Re-tune Report — What Was Fixed"):
+        with st.expander("View Re-tune Report — What Was Fixed"):
             score_data = retune_result["score_before"]
             st.markdown("### What the AI targeted this round:")
             if score_data.get("missing_keywords"):
@@ -723,4 +663,143 @@ with tab2:
         st.markdown("---")
 
         # ── Human vs AI score for this re-tune round ──────────────────────────
-        st.markdown(f"### ✍️ Human vs AI Score — Round
+        st.markdown("### Human vs AI Score — Round " + str(round_num))
+        retune_human_data = calculate_human_score(retune_result["tuned_resume"])
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            rh_color = "score-good" if retune_human_data["human_score"] >= 90 else \
+                       "score-fair" if retune_human_data["human_score"] >= 75 else "score-poor"
+            st.markdown(
+                '<div class="' + rh_color + '">Human: ' + str(retune_human_data["human_score"]) + '%</div>',
+                unsafe_allow_html=True
+            )
+            st.progress(retune_human_data["human_score"] / 100)
+        with col2:
+            ra_color = "score-poor" if retune_human_data["ai_score"] >= 25 else \
+                       "score-fair" if retune_human_data["ai_score"] >= 10 else "score-good"
+            st.markdown(
+                '<div class="' + ra_color + '">AI Generated: ' + str(retune_human_data["ai_score"]) + '%</div>',
+                unsafe_allow_html=True
+            )
+            st.progress(retune_human_data["ai_score"] / 100)
+        with col3:
+            st.markdown("**" + retune_human_data['emoji'] + " " + retune_human_data['rating'] + "**")
+            if retune_human_data["ai_phrases_found"]:
+                st.warning("AI phrases: " + ", ".join(retune_human_data['ai_phrases_found'][:5]))
+
+        if retune_human_data["human_score"] < 95:
+            st.warning(
+                "Human score is " + str(retune_human_data['human_score']) + "% for this round. " +
+                "Click below to rewrite in natural human tone."
+            )
+            if st.button(
+                "Re-write This Round in Human Tone",
+                type                = "primary",
+                use_container_width = True,
+                key                 = "rehumanize_retune_" + str(round_num)
+            ):
+                with st.spinner("Rewriting in human tone... (30-60 seconds)"):
+                    retune_human_result = rehumanize_resume(
+                        resume_text     = retune_result["tuned_resume"],
+                        job_description = st.session_state.tune_jd,
+                        job_title       = st.session_state.tune_title
+                    )
+                if "error" not in retune_human_result:
+                    st.session_state.retune_human_result = retune_human_result
+                    st.session_state.retune_resume       = retune_human_result["human_resume"]
+                else:
+                    st.error("Error: " + retune_human_result['error'])
+        else:
+            st.success("Human score: " + str(retune_human_data['human_score']) + "% — Sounds naturally written!")
+
+        # Show retune human result
+        if "retune_human_result" in st.session_state:
+            rhr       = st.session_state.retune_human_result
+            rh_after  = rhr["score_after"]["human_score"]
+            rh_before = rhr["score_before"]["human_score"]
+
+            st.markdown("#### Re-written in Human Tone")
+            col1, col2 = st.columns(2)
+            with col1:
+                rh_c = "score-good" if rh_after >= 90 else "score-fair"
+                st.markdown(
+                    '<div class="' + rh_c + '">Human: ' + str(rh_after) + '%</div>',
+                    unsafe_allow_html=True
+                )
+                st.progress(rh_after / 100)
+            with col2:
+                st.metric("Human Score Improvement", str(rh_after) + "%", delta=rh_after - rh_before)
+
+            st.text_area(
+                "Copy this human-written resume",
+                value  = rhr["human_resume"],
+                height = 400,
+                key    = "retune_human_text_" + str(round_num)
+            )
+
+            rh_pdf = save_tuned_resume(rhr["human_resume"], output_path="human_retuned_round" + str(round_num) + ".pdf")
+            with open(rh_pdf, "rb") as f:
+                rh_bytes = f.read()
+            st.download_button(
+                label               = "Download Human-Written Re-tuned Resume",
+                data                = rh_bytes,
+                file_name           = "human_retuned_round" + str(round_num) + ".pdf",
+                mime                = "application/pdf",
+                use_container_width = True,
+                key                 = "download_rh_" + str(round_num)
+            )
+
+            with st.expander("View Human Writing Report"):
+                st.markdown(rhr["human_report"])
+
+            if rh_after >= 95:
+                st.success("Human score: " + str(rh_after) + "% — Fully optimized and ready to submit!")
+            else:
+                st.info("Human score: " + str(rh_after) + "%. Re-write again if needed.")
+                if st.button(
+                    "Re-write Again for Higher Human Score",
+                    type                = "primary",
+                    use_container_width = True,
+                    key                 = "rehumanize_again_" + str(round_num)
+                ):
+                    with st.spinner("Rewriting again in human tone..."):
+                        next_human = rehumanize_resume(
+                            resume_text     = rhr["human_resume"],
+                            job_description = st.session_state.tune_jd,
+                            job_title       = st.session_state.tune_title
+                        )
+                    if "error" not in next_human:
+                        st.session_state.retune_human_result = next_human
+                        st.session_state.retune_resume       = next_human["human_resume"]
+                        st.rerun()
+
+        st.markdown("---")
+
+        if new_score >= 95:
+            st.balloons()
+            st.success("Perfect! ATS score " + str(new_score) + "/100 — Fully optimized and ready to submit!")
+        else:
+            st.warning("ATS score is now " + str(new_score) + "/100. Click Re-tune again to push higher!")
+            if st.button(
+                "Re-tune Again for Even Higher Score",
+                type                = "primary",
+                use_container_width = True,
+                key                 = "retune_again_" + str(round_num)
+            ):
+                with st.spinner("Re-tuning again targeting remaining gaps..."):
+                    next_retune = retune_resume(
+                        tuned_resume_text = st.session_state.retune_resume,
+                        job_description   = st.session_state.tune_jd,
+                        job_title         = st.session_state.tune_title,
+                        previous_score    = new_score
+                    )
+
+                if "error" not in next_retune:
+                    st.session_state.retune_result       = next_retune
+                    st.session_state.retune_resume       = next_retune["tuned_resume"]
+                    st.session_state.retune_score        = next_retune["score_after"]["total_score"]
+                    st.session_state.retune_round        = round_num + 1
+                    if "retune_human_result" in st.session_state:
+                        del st.session_state.retune_human_result
+                    st.rerun()
