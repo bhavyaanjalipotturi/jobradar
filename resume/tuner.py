@@ -1,7 +1,7 @@
 import os
 from anthropic import Anthropic
 from dotenv import load_dotenv
-from resume.ats_scorer import calculate_ats_score, format_score_report
+from resume.ats_scorer import calculate_ats_score, format_score_report, calculate_human_score
 
 load_dotenv()
 
@@ -13,8 +13,6 @@ def tune_resume(resume_text: str, job_description: str, job_title: str = "") -> 
     Uses Claude AI to rewrite the resume to match the job description.
     Returns tuned resume text and before/after ATS scores.
     """
-
-    # Score BEFORE tuning
     score_before = calculate_ats_score(resume_text, job_description)
 
     prompt = f"""You are an expert resume writer and ATS optimization specialist.
@@ -36,82 +34,54 @@ INSTRUCTIONS:
    - Identify any required skills or experience missing from the resume
    - Do NOT invent experience that does not exist
    - Instead, look at the existing background and reframe it to show how it connects
-     to the missing requirement
-   - If something similar or related exists, position it as transferable experience
-   - If a skill is completely absent with no related background, add it to the Skills
-     section only at a beginner/familiar level — and FLAG it clearly
-   - The goal is to present real experience in the most relevant and strategic way
+   - If a skill is completely absent, add it to Skills section at beginner level and FLAG it
 
-3. Rewrite Bullet Points — Human, Punchy, Results-Driven
-   - Start every bullet with a strong action verb
-   - Follow the format: Action + Task + Result/Impact (quantify wherever possible)
-   - Make it sound like a real experienced human wrote it
-   - AVOID these overused AI phrases: "spearheaded", "leveraged", "utilized",
-     "passionate", "dynamic", "synergy", "robust"
+3. Human-Written Tone — ABSOLUTELY MANDATORY
+   - The entire resume MUST read like a real human wrote it
+   - NEVER use: spearheaded, leveraged, utilized, passionate, dynamic, synergy,
+     robust, innovative, cutting-edge, orchestrated, championed, catalyzed,
+     streamlined, transformative, holistic, proactively
+   - USE instead: built, wrote, ran, fixed, helped, worked, set up, cut, led,
+     grew, saved, shipped, trained, found, made, got
 
-4. Metrics-Driven Achievements — ABSOLUTE MANDATORY REQUIREMENT
-   - You MUST include EXACTLY 3 to 5 bullet points with REAL NUMBERS in them
-   - These are NON-NEGOTIABLE — if you skip this the resume is incomplete
-   - Place them inside the experience and projects sections as bullet points
-   - Every metrics bullet MUST contain at least one specific number like:
-     * Percentages: 60%, 87%, 99%, 40%
-     * Counts: 12+ pipelines, 5 models, 8 workflows, 50K+ records
-     * Time: reduced by 3 hours, delivered in 2 weeks
-     * People: served 25+ stakeholders, supported 10+ clients
-   - Use these EXACT example formats:
-     * "Built and maintained [X]+ Python-based pipelines processing [X]K+ daily records"
-     * "Automated [X]+ recurring workflows reducing manual effort by [X]%"
-     * "Trained and deployed [X] ML models achieving [X]% accuracy and [X] F1-score"
-     * "Developed data pipelines processing [X]K+ records with [X]% data quality rate"
-     * "Reduced data processing time by [X]% through automated Python scripting"
-   - Estimate numbers conservatively based on context:
-     * Accenture (large enterprise) = millions of records, dozens of pipelines
-     * Capstone project (academic)  = thousands of records, 3-5 models
-     * Internship (small company)   = hundreds of records, 2-3 pipelines
-   - DO NOT write vague bullets — ALWAYS add a number
-   - After writing, count metrics bullets — if less than 3, add more
+4. Metrics-Driven Achievements — MANDATORY
+   - You MUST include EXACTLY 3 to 5 bullet points with REAL NUMBERS
+   - Every metrics bullet MUST contain at least one specific number
+   - Examples:
+     * "Built 12+ Python pipelines processing 500K+ daily records"
+     * "Automated 8+ workflows reducing manual effort by 60%"
+     * "Trained 5 ML models achieving 87% accuracy and 0.82 F1-score"
 
 5. Professional Summary
    - Write a 3-4 line summary tailored specifically to this job
-   - Make it sound confident, natural, and specific — not a generic template
-   - Include the job title from the posting and top 2-3 matching strengths
-   - Reflect only what is genuinely present in the background
+   - Include the exact job title and top 2-3 matching strengths
+   - Sound confident and specific — not generic
 
 6. Interview-Magnet Formatting
-   - Keep formatting clean and ATS-parseable (no tables, columns, or graphics)
-   - Prioritize the most relevant experience at the top
-   - Remove or trim anything irrelevant to this specific role
+   - Keep formatting ATS-parseable (no tables, columns, graphics)
+   - Prioritize most relevant experience at the top
 
-7. Final Report — Give a Summary at the END:
-   - Estimated ATS match score (target: 95%+)
-   - List of keywords successfully added
-   - List of gaps that were realistically bridged and how
-   - List of all metrics bullets added with explanation
-   - List of any FLAGGED skills the candidate needs to personally verify
-   - 2-3 tips to further strengthen the application
+7. Final Report at the END:
+   - Estimated ATS match score (target 95%+)
+   - Keywords successfully added
+   - Gaps bridged and how
+   - Metrics bullets added with number explanations
+   - Flagged skills to verify
+   - 2-3 tips to strengthen application
 
 ---
-
 JOB TITLE: {job_title}
-
 JOB DESCRIPTION:
 {job_description}
-
 ---
-
 ORIGINAL RESUME:
 {resume_text}
-
 ---
 
-Now write the COMPLETE rewritten resume first, then the Final Report.
-Separate the resume from the report with this exact line:
-===REPORT===
+Write the COMPLETE rewritten resume first, then the Final Report.
+Separate with: ===REPORT===
 
-IMPORTANT:
-- Write the FULL resume — do not skip any section
-- Make sure 3-5 metrics bullets with real numbers are clearly visible
-- The resume must be ready to copy and paste directly into a Word document
+IMPORTANT: Write the FULL resume. Include 3-5 metrics bullets with real numbers.
 """
 
     print("\nAI is analyzing and rewriting your resume...")
@@ -162,11 +132,7 @@ def retune_resume(
     Re-tunes an already tuned resume using the ATS report findings.
     Specifically targets missing keywords, skills and gaps to push score above 95.
     """
-
-    # Get detailed score report
-    score_before = calculate_ats_score(tuned_resume_text, job_description)
-
-    # Extract what is missing
+    score_before     = calculate_ats_score(tuned_resume_text, job_description)
     missing_keywords = score_before.get("missing_keywords", [])
     missing_skills   = score_before.get("missing_skills", [])
     keyword_score    = score_before.get("keyword_score", 0)
@@ -178,10 +144,9 @@ def retune_resume(
 
     prompt = f"""You are an expert ATS resume optimization specialist.
 
-The resume below has already been tuned once but only scored {total_score}/100.
-Your job is to push it above 95/100 by fixing EXACTLY what is missing.
+The resume below scored {total_score}/100. Push it above 95/100 by fixing EXACTLY what is missing.
 
-CURRENT SCORE BREAKDOWN:
+CURRENT SCORE:
 - Keyword Match   : {keyword_score}/30
 - Skills Match    : {skills_score}/25
 - Experience      : {score_before.get('exp_score', 0)}/20
@@ -189,62 +154,35 @@ CURRENT SCORE BREAKDOWN:
 - Job Title Match : {title_score}/10
 - Format          : {format_score}/5
 
-MISSING KEYWORDS THAT MUST BE ADDED:
+MISSING KEYWORDS TO ADD:
 {', '.join(missing_keywords) if missing_keywords else 'None'}
 
-MISSING SKILLS THAT MUST BE ADDED:
+MISSING SKILLS TO ADD:
 {', '.join(missing_skills) if missing_skills else 'None'}
 
-SPECIFIC INSTRUCTIONS TO HIT 95+:
+INSTRUCTIONS:
+1. Add every missing keyword naturally into summary, skills, bullets
+2. Add every missing skill to the Skills section
+3. The exact job title "{job_title}" MUST appear in the Professional Summary
+4. Keep all existing metrics bullets — add 1-2 more if possible
+5. DO NOT remove anything good that is already in the resume
 
-1. KEYWORD INJECTION — MANDATORY
-   - Every single missing keyword listed above MUST appear naturally in the resume
-   - Add them to: Professional Summary, Skills section, and bullet points
-   - Use the EXACT words — not synonyms
-   - Do not stuff them — weave them naturally into sentences
-
-2. SKILLS GAP — MANDATORY
-   - Every missing skill listed above MUST appear in the Skills section
-   - If no experience with it, add it as "familiar with X"
-   - Never leave a required skill completely absent
-
-3. JOB TITLE MATCH — MANDATORY
-   - The exact job title "{job_title}" MUST appear in:
-     * Professional Summary (first line)
-     * Skills or current role description
-   - This alone adds 10 points to the score
-
-4. METRICS — KEEP ALL EXISTING ONES
-   - Keep all quantified bullets already in the resume
-   - Add 1-2 more if possible with realistic numbers
-
-5. FORMAT IMPROVEMENTS
-   - Make sure all section headers are clearly defined
-   - Summary, Skills, Experience, Education must all be present
-   - Each section must have substantial content
-
-6. DO NOT REMOVE anything good already in the resume
-   - Only ADD and IMPROVE — never delete strong content
-   - Keep all existing metrics and achievements
-
-CURRENT RESUME TO IMPROVE:
+RESUME:
 {tuned_resume_text}
 
 JOB DESCRIPTION:
 {job_description}
 
-Write the COMPLETE improved resume then add:
+Write COMPLETE improved resume then add:
 ===REPORT===
-Then write:
-- Exact ATS score you estimate this will achieve
-- List every missing keyword you added and where
-- List every missing skill you added
-- Confirmation that job title appears in summary
+- Estimated ATS score
+- Missing keywords added and where
+- Missing skills added
+- Confirmation job title appears in summary
 - 2 final tips
 """
 
     print("\nRe-tuning resume targeting missing requirements...")
-    print("This takes 30-60 seconds...\n")
 
     try:
         message = client.messages.create(
@@ -275,6 +213,101 @@ Then write:
             "score_after":   score_after,
             "before_report": format_score_report(score_before, "Score Before Re-tune"),
             "after_report":  format_score_report(score_after,  "Score After Re-tune"),
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def rehumanize_resume(resume_text: str, job_description: str, job_title: str) -> dict:
+    """
+    Takes an already tuned resume and rewrites it to sound more human.
+    Keeps all content and meaning — only changes the tone and language.
+    """
+    score_before = calculate_human_score(resume_text)
+
+    prompt = f"""You are an expert resume editor who specializes in making resumes
+sound like they were written by a real human being — not AI.
+
+Rewrite the resume below so it sounds 100% human-written while keeping
+EVERY piece of information, achievement, and meaning intact.
+
+CRITICAL RULES:
+
+1. NEVER CHANGE THE MEANING
+   - Keep every job title, company, date, and achievement exactly as is
+   - Keep all numbers and metrics exactly as is
+   - Keep all technical skills and keywords exactly as is
+   - Only change HOW things are said — not WHAT is said
+
+2. MAKE IT SOUND HUMAN
+   - Write like a smart professional talking naturally
+   - Use short punchy sentences mixed with medium ones
+   - Start bullets with simple strong verbs: built, wrote, ran, led, cut,
+     fixed, helped, set up, grew, saved, shipped, trained, found
+   - NEVER use: spearheaded, leveraged, utilized, orchestrated, championed,
+     catalyzed, streamlined, paradigm, synergy, robust, innovative,
+     cutting-edge, transformative, holistic, proactively, dynamic
+   - Vary sentence structure — not every bullet the same pattern
+   - Occasionally use contractions: didn't, we'd, wasn't, it's
+
+3. HUMAN WRITING EXAMPLES
+   - "Built a pipeline that cut processing time by 40%" ✅
+   - "Developed an optimized pipeline solution that facilitated a 40%
+      reduction in processing time" ❌
+   - "Worked with the team to ship a new dashboard" ✅
+   - "Collaborated with cross-functional stakeholders to deliver
+      a comprehensive dashboard solution" ❌
+
+4. PROFESSIONAL SUMMARY
+   - Write like a confident person introducing themselves naturally
+   - Max 4 lines — direct and specific
+   - Sound excited but not robotic
+
+5. KEEP ATS KEYWORDS
+   - All job description keywords must still appear naturally
+   - Technical terms like Python, FastAPI, LangChain are fine as-is
+
+RESUME TO REHUMANIZE:
+{resume_text}
+
+JOB TITLE: {job_title}
+JOB DESCRIPTION CONTEXT: {job_description[:500]}
+
+Write the COMPLETE rehumanized resume.
+Then add:
+===HUMAN_REPORT===
+- Human-written score estimate (target 95%+)
+- AI phrases removed and what replaced them
+- 2 before vs after examples
+"""
+
+    print("\nRewriting resume in human tone...")
+
+    try:
+        message = client.messages.create(
+            model      = "claude-haiku-4-5-20251001",
+            max_tokens = 4000,
+            messages   = [{"role": "user", "content": prompt}]
+        )
+
+        full_response = message.content[0].text
+
+        if "===HUMAN_REPORT===" in full_response:
+            parts        = full_response.split("===HUMAN_REPORT===")
+            human_resume = parts[0].strip()
+            human_report = parts[1].strip() if len(parts) > 1 else ""
+        else:
+            human_resume = full_response
+            human_report = ""
+
+        score_after = calculate_human_score(human_resume)
+
+        return {
+            "human_resume":  human_resume,
+            "human_report":  human_report,
+            "score_before":  score_before,
+            "score_after":   score_after,
         }
 
     except Exception as e:

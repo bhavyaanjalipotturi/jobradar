@@ -211,26 +211,14 @@ with tab1:
                     date_filter_key  = date_filter_key
                 )
 
-                # Filter remote
                 if location == "Remote (USA)":
                     remote_jobs = [j for j in all_jobs if j.get("remote", False)]
                     all_jobs    = remote_jobs if remote_jobs else all_jobs
 
-                # Filter by experience level
                 exp_map = {
-                    "Entry Level (1-3 years)": [
-                        "entry", "junior", "associate",
-                        "jr", "grad", "graduate", "fresher"
-                    ],
-                    "Mid Level (3-5 years)": [
-                        "mid", "intermediate", "ii",
-                        "experienced", "3", "4", "5"
-                    ],
-                    "Senior Level (5+ years)": [
-                        "senior", "sr", "lead", "principal",
-                        "staff", "manager", "architect",
-                        "head", "director"
-                    ]
+                    "Entry Level (1-3 years)": ["entry", "junior", "associate", "jr", "grad", "graduate", "fresher"],
+                    "Mid Level (3-5 years)":   ["mid", "intermediate", "ii", "experienced", "3", "4", "5"],
+                    "Senior Level (5+ years)": ["senior", "sr", "lead", "principal", "staff", "manager", "architect", "head", "director"]
                 }
 
                 if experience_level != "All Levels":
@@ -245,7 +233,6 @@ with tab1:
                     ]
                     all_jobs = filtered if filtered else all_jobs
 
-                # Filter by job type
                 type_keywords = {
                     "Full-time":  ["full-time", "full time", "permanent", "fulltime"],
                     "Part-time":  ["part-time", "part time", "parttime"],
@@ -267,7 +254,6 @@ with tab1:
                                 break
                     all_jobs = type_filtered if type_filtered else all_jobs
 
-                # Filter by visa type
                 visa_keywords = VISA_TYPES.get(visa_type, [])
                 if visa_keywords and visa_type != "Any / No Preference":
                     visa_filtered = []
@@ -407,17 +393,19 @@ with tab2:
                     result = tune_resume(resume_text, job_description, job_title_tune)
 
                 if "error" not in result:
-                    st.session_state.tune_score_before = score_before
-                    st.session_state.tune_result       = result
-                    st.session_state.tune_jd           = job_description
-                    st.session_state.tune_title        = job_title_tune
-                    st.session_state.retune_resume     = result["tuned_resume"]
-                    st.session_state.retune_score      = result["score_after"]["total_score"]
-                    st.session_state.retune_round      = 1
+                    st.session_state.tune_score_before    = score_before
+                    st.session_state.tune_result          = result
+                    st.session_state.tune_jd              = job_description
+                    st.session_state.tune_title           = job_title_tune
+                    st.session_state.retune_resume        = result["tuned_resume"]
+                    st.session_state.retune_score         = result["score_after"]["total_score"]
+                    st.session_state.retune_round         = 1
                     if "retune_result" in st.session_state:
                         del st.session_state.retune_result
                     if "human_result" in st.session_state:
                         del st.session_state.human_result
+                    if "retune_human_result" in st.session_state:
+                        del st.session_state.retune_human_result
                 else:
                     st.error(f"Error: {result['error']}")
             finally:
@@ -483,7 +471,6 @@ with tab2:
             key    = "tuned_text"
         )
 
-        # Download PDF
         pdf_path = save_tuned_resume(result["tuned_resume"])
         with open(pdf_path, "rb") as f:
             pdf_bytes = f.read()
@@ -556,7 +543,7 @@ with tab2:
         else:
             st.success(
                 f"✅ Human score: {human_data['human_score']}% — "
-                f"Resume sounds naturally written! No rewrite needed."
+                f"Resume sounds naturally written!"
             )
 
         # Show human rewrite result
@@ -605,7 +592,6 @@ with tab2:
             )
             with open(human_pdf, "rb") as f:
                 human_bytes = f.read()
-
             st.download_button(
                 label               = "📥 Download Human-Written Resume as PDF",
                 data                = human_bytes,
@@ -623,10 +609,7 @@ with tab2:
                     f"Resume sounds completely natural and ready to submit!"
                 )
             else:
-                st.warning(
-                    f"Human score is {h_after}%. "
-                    f"Click Re-write again to push higher!"
-                )
+                st.warning(f"Human score is {h_after}%. Click Re-write again to push higher!")
                 if st.button(
                     "✍️ Re-write Again for Higher Human Score",
                     type                = "primary",
@@ -676,10 +659,12 @@ with tab2:
                     )
 
                 if "error" not in retune_result:
-                    st.session_state.retune_result = retune_result
-                    st.session_state.retune_resume = retune_result["tuned_resume"]
-                    st.session_state.retune_score  = retune_result["score_after"]["total_score"]
-                    st.session_state.retune_round  = st.session_state.get("retune_round", 1) + 1
+                    st.session_state.retune_result       = retune_result
+                    st.session_state.retune_resume       = retune_result["tuned_resume"]
+                    st.session_state.retune_score        = retune_result["score_after"]["total_score"]
+                    st.session_state.retune_round        = st.session_state.get("retune_round", 1) + 1
+                    if "retune_human_result" in st.session_state:
+                        del st.session_state.retune_human_result
 
     # ── Show re-tune results ──────────────────────────────────────────────────
     if "retune_result" in st.session_state:
@@ -692,14 +677,13 @@ with tab2:
         col1, col2 = st.columns(2)
         with col1:
             color3 = "score-good" if new_score >= 75 else "score-fair"
-            st.markdown(f'<div class="{color3}">{new_score}/100</div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="{color3}">{new_score}/100</div>',
+                unsafe_allow_html=True
+            )
             st.progress(new_score / 100)
         with col2:
-            st.metric(
-                "Score Improvement",
-                f"{new_score}/100",
-                delta = new_score - old_score
-            )
+            st.metric("Score Improvement", f"{new_score}/100", delta=new_score - old_score)
 
         st.markdown("### Re-tuned Resume")
         st.text_area(
@@ -738,34 +722,5 @@ with tab2:
 
         st.markdown("---")
 
-        if new_score >= 95:
-            st.balloons()
-            st.success(
-                f"🎉 Perfect! Your resume now scores {new_score}/100 — "
-                f"Fully optimized and ready to submit!"
-            )
-        else:
-            st.warning(
-                f"Score is now {new_score}/100. "
-                f"Click Re-tune again to push higher!"
-            )
-            if st.button(
-                "🔄 Re-tune Again for Even Higher Score",
-                type                = "primary",
-                use_container_width = True,
-                key                 = f"retune_again_{round_num}"
-            ):
-                with st.spinner("Re-tuning again targeting remaining gaps..."):
-                    next_retune = retune_resume(
-                        tuned_resume_text = st.session_state.retune_resume,
-                        job_description   = st.session_state.tune_jd,
-                        job_title         = st.session_state.tune_title,
-                        previous_score    = new_score
-                    )
-
-                if "error" not in next_retune:
-                    st.session_state.retune_result = next_retune
-                    st.session_state.retune_resume = next_retune["tuned_resume"]
-                    st.session_state.retune_score  = next_retune["score_after"]["total_score"]
-                    st.session_state.retune_round  = round_num + 1
-                    st.rerun()
+        # ── Human vs AI score for this re-tune round ──────────────────────────
+        st.markdown(f"### ✍️ Human vs AI Score — Round
